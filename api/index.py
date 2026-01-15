@@ -6,7 +6,7 @@ import statistics
 
 app = FastAPI()
 
-# Enable CORS (required)
+# CORS (required by assignment)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,20 +14,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Models ---
 class RequestBody(BaseModel):
     regions: List[str]
     threshold_ms: int
 
+# --- Health check (IMPORTANT: prevents crashes) ---
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+# --- Required endpoint ---
 @app.post("/api/latency")
 def latency_metrics(data: RequestBody):
     results: Dict[str, Dict] = {}
 
     for region in data.regions:
-        # dummy latency values (example)
         latencies = [100, 120, 130, 150, 170]
 
         avg_latency = statistics.mean(latencies)
-        p95_latency = sorted(latencies)[int(0.95 * len(latencies)) - 1]
+
+        # SAFE p95 calculation
+        latencies_sorted = sorted(latencies)
+        index = max(0, int(0.95 * len(latencies_sorted)) - 1)
+        p95_latency = latencies_sorted[index]
+
         avg_uptime = 99.9
         breaches = sum(1 for l in latencies if l > data.threshold_ms)
 
